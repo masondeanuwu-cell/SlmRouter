@@ -1,0 +1,169 @@
+Creating a proxy server in Node.js that captures all requests from an HTML `<iframe>` involves several key concepts:
+
+1. **Intercepting HTTP/HTTPS traffic**
+2. **Rewriting responses (e.g., rewriting HTML to ensure all requests go through the proxy)**
+3. **Handling CORS issues to allow iframes to load content from the proxy**
+4. **Logging or manipulating the captured requests**
+
+Here’s a deep dive into building a **transparent HTTP/HTTPS proxy** in Node.js using packages like `http`, `https`, `http-proxy`, and `express`, with optional HTML rewriting using `cheerio` or `node-html-parser`.
+
+---
+
+### 🧱 Goal
+
+Build a **proxy server** that:
+
+* Accepts an iframe pointing to any external URL
+* Fetches that URL server-side
+* Rewrites its contents so that all subsequent requests (scripts, stylesheets, images, iframes, AJAX calls) also go through the proxy
+* Logs or inspects all such requests
+
+---
+
+## 🔧 Step-by-step Overview
+
+---
+
+### 1. **Set up a basic HTTP proxy with Express**
+
+```bash
+npm install express http-proxy-middleware cheerio axios
+```
+
+### 2. **Server Structure (Node.js + Express)**
+
+```js
+const express = require('express');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { URL } = require('url');
+const app = express();
+
+const PORT = 3000;
+```
+
+---
+
+### 3. **Proxy route to fetch and rewrite HTML**
+
+```js
+app.get('/proxy', async (req, res) => {
+    const targetUrl = req.query.url;
+
+    if (!targetUrl) {
+        return res.status(400).send('Missing url query parameter.');
+    }
+
+    try {
+        const response = await axios.get(targetUrl);
+        const contentType = response.headers['content-type'];
+
+        if (contentType.includes('text/html')) {
+            const $ = cheerio.load(response.data);
+
+            // Rewrite all src/href attributes to go through the proxy
+            $('*[src], *[href]').each((i, el) => {
+                const attr = el.attribs.src ? 'src' : 'href';
+                const originalUrl = $(el).attr(attr);
+
+                try {
+                    const absoluteUrl = new URL(originalUrl, targetUrl).href;
+                    $(el).attr(attr, `/proxy?url=${encodeURIComponent(absoluteUrl)}`);
+                } catch {
+                    // Ignore malformed URLs
+                }
+            });
+
+            res.set('Content-Type', 'text/html');
+            res.send($.html());
+        } else {
+            // Forward other content types as-is (images, CSS, etc.)
+            res.set('Content-Type', contentType);
+            res.send(response.data);
+        }
+    } catch (err) {
+        res.status(500).send('Error fetching the target URL: ' + err.message);
+    }
+});
+```
+
+---
+
+### 4. **CORS & Headers**
+
+You must allow CORS headers to let the iframe load content:
+
+```js
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*"); // Modify as needed
+    next();
+});
+```
+
+> ⚠️ Be careful with open CORS in production.
+
+---
+
+### 5. **Serve the Iframe HTML (for testing)**
+
+```js
+app.get('/', (req, res) => {
+    res.send(`
+        <iframe src="/proxy?url=https://example.com" width="100%" height="800px"></iframe>
+    `);
+});
+```
+
+---
+
+### 6. **Request Logging (Capturing All Requests)**
+
+You can add middleware to log all proxied requests:
+
+```js
+app.use('/proxy', (req, res, next) => {
+    console.log(`Proxying request to: ${req.query.url}`);
+    next();
+});
+```
+
+Or use a dedicated logger if needed.
+
+---
+
+## 🔐 Security Considerations
+
+* **URL Validation**: Sanitize input to prevent SSRF attacks
+* **Resource Abuse**: Add rate-limiting and access control
+* **CORS Risks**: Don’t use `Access-Control-Allow-Origin: *` in production
+
+---
+
+## 🚀 How It Works in an Iframe
+
+When the `<iframe src="/proxy?url=https://example.com">` is loaded:
+
+1. The proxy server fetches `https://example.com`.
+2. HTML is parsed and all links, images, scripts, styles, and iframes are rewritten to point back to the proxy.
+3. All sub-resources are therefore routed through `/proxy?url=...`, allowing capture.
+4. The proxy logs each request, enabling you to inspect what the iframe is loading.
+
+---
+
+## ✅ Summary
+
+You now have a working Node.js proxy that:
+
+* Allows iframe embedding of any site
+* Captures and rewrites all requests
+* Intercepts and logs everything the iframe loads
+
+---
+
+## 🧪 Optional Enhancements
+
+* Add support for `POST`/`PUT` requests with body parsing
+* Cache responses to improve performance
+* Use `http-proxy` for more robust request forwarding (e.g., handling cookies and redirects)
+
+Would you like an advanced version with WebSocket support or full two-way logging?

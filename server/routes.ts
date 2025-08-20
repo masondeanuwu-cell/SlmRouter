@@ -5,20 +5,45 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { URL } from "url";
 import { insertProxyConfigSchema, insertRequestLogSchema, loginSchema, changePasswordSchema } from "@shared/schema";
+import fs from 'fs';
+import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authentication endpoints
-  // Store password in memory (in production, you'd use a secure database)
-  let dashboardPassword = process.env.DASHBOARD_PASSWORD || "admin123";
+  // Load users from JSON file
+  const getUsersFromFile = () => {
+    try {
+      const usersPath = path.join(process.cwd(), 'server', 'users.json');
+      const usersData = fs.readFileSync(usersPath, 'utf8');
+      return JSON.parse(usersData);
+    } catch (error) {
+      console.error('Error reading users file:', error);
+      return [];
+    }
+  };
 
+  const saveUsersToFile = (users: any[]) => {
+    try {
+      const usersPath = path.join(process.cwd(), 'server', 'users.json');
+      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
+    } catch (error) {
+      console.error('Error saving users file:', error);
+    }
+  };
+
+  // Authentication endpoints
   app.post("/api/auth/login", async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
+      const users = getUsersFromFile();
       
-      if (validatedData.password === dashboardPassword) {
-        res.json({ success: true, message: "Login successful" });
+      const user = users.find((u: any) => 
+        u.username === validatedData.username && u.password === validatedData.password
+      );
+      
+      if (user) {
+        res.json({ success: true, message: "Login successful", username: user.username });
       } else {
-        res.status(401).json({ message: "Invalid password" });
+        res.status(401).json({ message: "Invalid username or password" });
       }
     } catch (error: any) {
       res.status(400).json({ message: "Invalid request", error: error.message });
@@ -28,14 +53,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/change-password", async (req, res) => {
     try {
       const validatedData = changePasswordSchema.parse(req.body);
+      const users = getUsersFromFile();
       
-      // Verify current password
-      if (validatedData.currentPassword !== dashboardPassword) {
-        return res.status(401).json({ message: "Current password is incorrect" });
+      // Find user and verify current password
+      const userIndex = users.findIndex((u: any) => 
+        u.username === validatedData.username && u.password === validatedData.currentPassword
+      );
+      
+      if (userIndex === -1) {
+        return res.status(401).json({ message: "Current username or password is incorrect" });
       }
       
       // Update password
-      dashboardPassword = validatedData.newPassword;
+      users[userIndex].password = validatedData.newPassword;
+      saveUsersToFile(users);
       
       res.json({ success: true, message: "Password changed successfully" });
     } catch (error: any) {

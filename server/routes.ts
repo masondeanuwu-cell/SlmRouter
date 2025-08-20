@@ -13,7 +13,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertProxyConfigSchema.parse(req.body);
       const config = await storage.createProxyConfig(validatedData);
       res.json(config);
-    } catch (error) {
+    } catch (error: any) {
       res.status(400).json({ message: "Invalid proxy configuration", error: error.message });
     }
   });
@@ -22,14 +22,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const config = await storage.getLatestProxyConfig();
       res.json(config || null);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Failed to get proxy configuration", error: error.message });
     }
   });
 
-  // Proxy endpoint - handles the actual proxying with HTML rewriting
-  app.get("/api/proxy", async (req, res) => {
+  // Helper function to determine if content is binary
+  const isBinaryContent = (contentType: string): boolean => {
+    const binaryTypes = [
+      'image/', 'video/', 'audio/', 'application/pdf', 'application/zip',
+      'application/x-zip-compressed', 'application/octet-stream',
+      'application/x-rar-compressed', 'application/x-tar', 'application/gzip',
+      'font/', 'application/font-', 'application/x-font-'
+    ];
+    return binaryTypes.some(type => contentType.toLowerCase().includes(type));
+  };
+
+  // OPTIONS handler for CORS preflight
+  app.options("/api/proxy", (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    res.status(200).end();
+  });
+
+  // Proxy endpoint - handles all HTTP methods with proper binary content support
+  app.all("/api/proxy", async (req, res) => {
     const targetUrl = req.query.url as string;
+    const method = req.method.toUpperCase();
     const startTime = Date.now();
 
     if (!targetUrl) {
@@ -47,28 +68,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       await storage.incrementRequestCount();
-      await storage.setActiveConnections(1); // Simplified for demo
+      await storage.setActiveConnections(1);
 
-      const response = await axios.get(targetUrl, {
-        timeout: 30000,
-        maxRedirects: 5,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ProxyServer/1.0)',
+      // Prepare request headers
+      const requestHeaders: any = {
+        'User-Agent': 'Mozilla/5.0 (compatible; ProxyServer/1.0)',
+      };
+
+      // Forward original headers (excluding host and connection-related ones)
+      const excludeHeaders = ['host', 'connection', 'content-length', 'transfer-encoding'];
+      Object.keys(req.headers).forEach(key => {
+        if (!excludeHeaders.includes(key.toLowerCase())) {
+          requestHeaders[key] = req.headers[key];
         }
       });
 
-      const contentType = response.headers['content-type'] || '';
-      const contentLength = Buffer.byteLength(response.data);
+      // Prepare request config
+      const axiosConfig: any = {
+        method: method,
+        url: targetUrl,
+        timeout: 30000,
+        maxRedirects: 5,
+        headers: requestHeaders,
+        responseType: 'arraybuffer', // Always use arraybuffer to handle both text and binary
+        validateStatus: () => true, // Accept all status codes
+      };
+
+      // Add request body for POST, PUT, PATCH requests
+      if (['POST', 'PUT', 'PATCH'].includes(method) && req.body) {
+        axiosConfig.data = req.body;
+      }
+
+      const response = await axios(axiosConfig);
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const contentLength = response.data.length;
       const duration = Date.now() - startTime;
 
       // Log the request
       await storage.createRequestLog({
-        method: 'GET',
+        method: method,
         url: targetUrl,
         status: response.status,
         size: contentLength,
         duration,
-        configId: null, // Could be linked to current config
+        configId: null,
       });
 
       await storage.addDataTransferred(contentLength);
@@ -76,10 +119,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set CORS headers
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
 
+      // Forward response headers (excluding certain ones)
+      const excludeResponseHeaders = ['transfer-encoding', 'connection', 'access-control-allow-origin'];
+      Object.keys(response.headers).forEach(key => {
+        if (!excludeResponseHeaders.includes(key.toLowerCase())) {
+          res.setHeader(key, response.headers[key]);
+        }
+      });
+
+      // Handle different content types
       if (contentType.includes('text/html')) {
-        const $ = cheerio.load(response.data);
+        // Convert buffer to string for HTML processing
+        const htmlContent = response.data.toString('utf8');
+        const $ = cheerio.load(htmlContent);
 
         // Rewrite all src and href attributes to go through the proxy
         $('*[src], *[href]').each((i, el) => {
@@ -112,12 +166,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
 
-        // Inject a script to intercept AJAX requests
+        // Inject a script to intercept AJAX requests and handle different HTTP methods
         const interceptScript = `
           <script>
             (function() {
               const originalFetch = window.fetch;
-              window.fetch = function(url, options) {
+              window.fetch = function(url, options = {}) {
                 if (typeof url === 'string' && !url.startsWith('/api/proxy')) {
                   try {
                     const absoluteUrl = new URL(url, '${targetUrl}').href;
@@ -142,21 +196,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `;
 
         $('head').append(interceptScript);
-
-        res.set('Content-Type', 'text/html');
-        res.send($.html());
+        
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.status(response.status).send($.html());
+      
+      } else if (isBinaryContent(contentType)) {
+        // Handle binary content (images, videos, etc.)
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', contentLength.toString());
+        res.status(response.status).end(response.data);
+      
+      } else if (contentType.includes('text/') || contentType.includes('application/json') || contentType.includes('application/xml')) {
+        // Handle text content (CSS, JS, JSON, XML, etc.)
+        const textContent = response.data.toString('utf8');
+        res.setHeader('Content-Type', contentType);
+        res.status(response.status).send(textContent);
+      
       } else {
-        // Forward other content types as-is
-        res.set('Content-Type', contentType);
-        res.send(response.data);
+        // Handle other content types as binary
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', contentLength.toString());
+        res.status(response.status).end(response.data);
       }
-    } catch (error) {
+
+    } catch (error: any) {
       const duration = Date.now() - startTime;
       await storage.incrementErrorCount();
       
       // Log the failed request
       await storage.createRequestLog({
-        method: 'GET',
+        method: method,
         url: targetUrl,
         status: error.response?.status || 500,
         size: 0,
@@ -169,17 +238,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message 
       });
     } finally {
-      await storage.setActiveConnections(0); // Simplified for demo
+      await storage.setActiveConnections(0);
     }
   });
 
   // Request logs endpoints
   app.get("/api/request-logs", async (req, res) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const limit = req.query.limit ? parseInt(String(req.query.limit)) : 50;
       const logs = await storage.getRequestLogs(limit);
       res.json(logs);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Failed to get request logs", error: error.message });
     }
   });
@@ -188,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.clearRequestLogs();
       res.json({ message: "Request logs cleared successfully" });
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Failed to clear request logs", error: error.message });
     }
   });
@@ -198,7 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const stats = await storage.getServerStats();
       res.json(stats);
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Failed to get server stats", error: error.message });
     }
   });

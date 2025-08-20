@@ -194,6 +194,7 @@ export default function Settings() {
                 <span className="text-emerald-700 text-xs font-medium">Online</span>
               </span>
             </div>
+
             <div className="flex justify-between items-center">
               <span className="text-sm text-slate-600">Proxy Port</span>
               <span className="font-mono font-medium text-slate-900">5000</span>
@@ -201,6 +202,10 @@ export default function Settings() {
             <div className="flex justify-between items-center">
               <span className="text-sm text-slate-600">Version</span>
               <span className="font-mono font-medium text-slate-900">1.0.0</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">Made With Love</span>
+              <span className="font-mono font-medium text-slate-900">Mason Dean</span>
             </div>
           </div>
         </CardContent>

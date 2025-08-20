@@ -206,27 +206,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const interceptScript = `
           <script>
             (function() {
+              const baseUrl = '${targetUrl}';
+              
+              // Helper function to rewrite URLs
+              function rewriteUrl(url) {
+                if (typeof url !== 'string' || url.startsWith('/api/proxy') || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('javascript:')) {
+                  return url;
+                }
+                try {
+                  const absoluteUrl = new URL(url, baseUrl).href;
+                  return '/api/proxy?url=' + encodeURIComponent(absoluteUrl);
+                } catch (e) {
+                  return url;
+                }
+              }
+
+              // Intercept fetch
               const originalFetch = window.fetch;
               window.fetch = function(url, options = {}) {
-                if (typeof url === 'string' && !url.startsWith('/api/proxy')) {
-                  try {
-                    const absoluteUrl = new URL(url, '${targetUrl}').href;
-                    url = '/api/proxy?url=' + encodeURIComponent(absoluteUrl);
-                  } catch (e) {}
-                }
+                url = rewriteUrl(url);
                 return originalFetch.call(this, url, options);
               };
 
+              // Intercept XMLHttpRequest
               const originalXHROpen = XMLHttpRequest.prototype.open;
               XMLHttpRequest.prototype.open = function(method, url, ...args) {
-                if (typeof url === 'string' && !url.startsWith('/api/proxy')) {
-                  try {
-                    const absoluteUrl = new URL(url, '${targetUrl}').href;
-                    url = '/api/proxy?url=' + encodeURIComponent(absoluteUrl);
-                  } catch (e) {}
-                }
+                url = rewriteUrl(url);
                 return originalXHROpen.call(this, method, url, ...args);
               };
+
+              // Intercept window.location changes
+              const originalLocation = window.location;
+              Object.defineProperty(window, 'location', {
+                get: function() {
+                  return originalLocation;
+                },
+                set: function(url) {
+                  const rewrittenUrl = rewriteUrl(url);
+                  originalLocation.href = rewrittenUrl;
+                }
+              });
+
+              // Intercept location.href changes
+              let originalHref = originalLocation.href;
+              Object.defineProperty(originalLocation, 'href', {
+                get: function() {
+                  return originalHref;
+                },
+                set: function(url) {
+                  const rewrittenUrl = rewriteUrl(url);
+                  originalHref = rewrittenUrl;
+                  window.location.replace(rewrittenUrl);
+                }
+              });
+
+              // Intercept navigation methods
+              const originalAssign = originalLocation.assign;
+              originalLocation.assign = function(url) {
+                const rewrittenUrl = rewriteUrl(url);
+                return originalAssign.call(this, rewrittenUrl);
+              };
+
+              const originalReplace = originalLocation.replace;
+              originalLocation.replace = function(url) {
+                const rewrittenUrl = rewriteUrl(url);
+                return originalReplace.call(this, rewrittenUrl);
+              };
+
+              // Handle form submissions with GET method
+              document.addEventListener('submit', function(event) {
+                const form = event.target;
+                if (form.tagName === 'FORM' && form.method.toLowerCase() === 'get') {
+                  event.preventDefault();
+                  const formData = new FormData(form);
+                  const params = new URLSearchParams();
+                  for (const [key, value] of formData.entries()) {
+                    params.append(key, value);
+                  }
+                  const actionUrl = form.action || window.location.href;
+                  const fullUrl = actionUrl + (actionUrl.includes('?') ? '&' : '?') + params.toString();
+                  window.location.href = rewriteUrl(fullUrl);
+                }
+              }, true);
+
+              // Intercept link clicks to handle any missed rewrites
+              document.addEventListener('click', function(event) {
+                const link = event.target.closest('a[href]');
+                if (link && !link.href.startsWith('/api/proxy')) {
+                  event.preventDefault();
+                  const rewrittenUrl = rewriteUrl(link.href);
+                  window.location.href = rewrittenUrl;
+                }
+              }, true);
             })();
           </script>
         `;

@@ -9,20 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { ChangePasswordRequest } from "@shared/schema";
 
 export default function Settings() {
-  const [username, setUsername] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const { toast } = useToast();
-
-  // Get current username from session
-  useState(() => {
-    const storedUsername = sessionStorage.getItem('proxy-username');
-    if (storedUsername) {
-      setUsername(storedUsername);
-    }
-  });
 
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordRequest) => {
@@ -70,7 +61,6 @@ export default function Settings() {
     }
 
     changePasswordMutation.mutate({
-      username,
       currentPassword,
       newPassword,
     });
@@ -106,21 +96,6 @@ export default function Settings() {
             </div>
           ) : (
             <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium text-slate-700">
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="Your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={changePasswordMutation.isPending}
-                  required
-                />
-              </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="current-password" className="text-sm font-medium text-slate-700">
                   Current Password

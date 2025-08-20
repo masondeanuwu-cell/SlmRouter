@@ -13,7 +13,6 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin }: LoginProps) {
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
 
@@ -22,14 +21,8 @@ export default function Login({ onLogin }: LoginProps) {
       const response = await apiRequest('POST', '/api/auth/login', data);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       sessionStorage.setItem('proxy-authenticated', 'true');
-      if (data.username) {
-        sessionStorage.setItem('proxy-username', data.username);
-      }
-      if (data.sessionToken) {
-        sessionStorage.setItem('proxy-session-token', data.sessionToken);
-      }
       onLogin();
       toast({
         title: "Login Successful",
@@ -48,16 +41,16 @@ export default function Login({ onLogin }: LoginProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username || !password) {
+    if (!password) {
       toast({
-        title: "Credentials Required",
-        description: "Please enter both username and password to continue",
+        title: "Password Required",
+        description: "Please enter a password to continue",
         variant: "destructive",
       });
       return;
     }
 
-    loginMutation.mutate({ username, password });
+    loginMutation.mutate({ password });
   };
 
   return (
@@ -79,32 +72,18 @@ export default function Login({ onLogin }: LoginProps) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-slate-700">
-                Username
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full"
-                disabled={loginMutation.isPending}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium text-slate-700">
                 Password
               </Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter dashboard password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full"
                 disabled={loginMutation.isPending}
+                autoFocus
               />
             </div>
             <Button 

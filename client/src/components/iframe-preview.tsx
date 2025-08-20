@@ -10,12 +10,7 @@ export default function IframePreview() {
 
   useEffect(() => {
     if (currentConfig?.targetUrl) {
-      const sessionToken = sessionStorage.getItem('proxy-session-token');
-      if (sessionToken) {
-        setIframeSrc(`/api/proxy?url=${encodeURIComponent(currentConfig.targetUrl)}&sessionToken=${encodeURIComponent(sessionToken)}`);
-      } else {
-        setIframeSrc(''); // No session token, cannot access proxy
-      }
+      setIframeSrc(`/api/proxy?url=${encodeURIComponent(currentConfig.targetUrl)}`);
     }
   }, [currentConfig]);
 
@@ -24,9 +19,6 @@ export default function IframePreview() {
       window.open(iframeSrc, '_blank');
     }
   };
-
-  const sessionToken = sessionStorage.getItem('proxy-session-token');
-  const isAuthenticated = sessionToken && sessionStorage.getItem('proxy-authenticated') === 'true';
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -52,15 +44,7 @@ export default function IframePreview() {
       </div>
       <div className="p-6">
         <div className="border border-slate-300 rounded-lg overflow-hidden bg-white" style={{ height: "400px" }}>
-          {!isAuthenticated ? (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100">
-              <div className="text-center">
-                <i className="fas fa-lock text-4xl text-red-400 mb-4"></i>
-                <p className="text-slate-600 mb-2">Authentication Required</p>
-                <p className="text-sm text-slate-400">Please log in to access the proxy</p>
-              </div>
-            </div>
-          ) : iframeSrc ? (
+          {iframeSrc ? (
             <iframe 
               src={iframeSrc}
               className="w-full h-full border-0"

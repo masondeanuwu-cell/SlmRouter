@@ -5,75 +5,20 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { URL } from "url";
 import { insertProxyConfigSchema, insertRequestLogSchema, loginSchema, changePasswordSchema } from "@shared/schema";
-import fs from 'fs';
-import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Session storage for authenticated users
-  const authenticatedSessions = new Map<string, { username: string, loginTime: number }>();
-  
-  // Clean up old sessions (older than 24 hours)
-  const cleanupSessions = () => {
-    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-    for (const [sessionId, session] of authenticatedSessions.entries()) {
-      if (session.loginTime < oneDayAgo) {
-        authenticatedSessions.delete(sessionId);
-      }
-    }
-  };
-  
-  // Run cleanup every hour
-  setInterval(cleanupSessions, 60 * 60 * 1000);
-
-  // Load users from JSON file
-  const getUsersFromFile = () => {
-    try {
-      const usersPath = path.join(process.cwd(), 'server', 'users.json');
-      const usersData = fs.readFileSync(usersPath, 'utf8');
-      return JSON.parse(usersData);
-    } catch (error) {
-      console.error('Error reading users file:', error);
-      return [];
-    }
-  };
-
-  const saveUsersToFile = (users: any[]) => {
-    try {
-      const usersPath = path.join(process.cwd(), 'server', 'users.json');
-      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf8');
-    } catch (error) {
-      console.error('Error saving users file:', error);
-    }
-  };
-
   // Authentication endpoints
+  // Store password in memory (in production, you'd use a secure database)
+  let dashboardPassword = process.env.DASHBOARD_PASSWORD || "admin123";
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
-      const users = getUsersFromFile();
       
-      const user = users.find((u: any) => 
-        u.username === validatedData.username && u.password === validatedData.password
-      );
-      
-      if (user) {
-        // Generate session token
-        const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-        
-        // Store session
-        authenticatedSessions.set(sessionToken, {
-          username: user.username,
-          loginTime: Date.now()
-        });
-        
-        res.json({ 
-          success: true, 
-          message: "Login successful", 
-          username: user.username,
-          sessionToken: sessionToken
-        });
+      if (validatedData.password === dashboardPassword) {
+        res.json({ success: true, message: "Login successful" });
       } else {
-        res.status(401).json({ message: "Invalid username or password" });
+        res.status(401).json({ message: "Invalid password" });
       }
     } catch (error: any) {
       res.status(400).json({ message: "Invalid request", error: error.message });
@@ -83,20 +28,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/change-password", async (req, res) => {
     try {
       const validatedData = changePasswordSchema.parse(req.body);
-      const users = getUsersFromFile();
       
-      // Find user and verify current password
-      const userIndex = users.findIndex((u: any) => 
-        u.username === validatedData.username && u.password === validatedData.currentPassword
-      );
-      
-      if (userIndex === -1) {
-        return res.status(401).json({ message: "Current username or password is incorrect" });
+      // Verify current password
+      if (validatedData.currentPassword !== dashboardPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
       }
       
       // Update password
-      users[userIndex].password = validatedData.newPassword;
-      saveUsersToFile(users);
+      dashboardPassword = validatedData.newPassword;
       
       res.json({ success: true, message: "Password changed successfully" });
     } catch (error: any) {
@@ -144,32 +83,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).end();
   });
 
-  // Authentication middleware for proxy
-  const requireProxyAuth = (req: any, res: any, next: any) => {
-    const sessionToken = req.headers['x-session-token'] || req.query.sessionToken;
-    
-    if (!sessionToken) {
-      return res.status(401).json({ message: "Authentication required. Please log in to use the proxy." });
-    }
-    
-    const session = authenticatedSessions.get(sessionToken);
-    if (!session) {
-      return res.status(401).json({ message: "Invalid or expired session. Please log in again." });
-    }
-    
-    // Check if session is expired (24 hours)
-    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-    if (session.loginTime < oneDayAgo) {
-      authenticatedSessions.delete(sessionToken);
-      return res.status(401).json({ message: "Session expired. Please log in again." });
-    }
-    
-    req.user = session;
-    next();
-  };
-
   // Proxy endpoint - handles all HTTP methods with proper binary content support
-  app.all("/api/proxy", requireProxyAuth, async (req, res) => {
+  app.all("/api/proxy", async (req, res) => {
     const targetUrl = req.query.url as string;
     const method = req.method.toUpperCase();
     const startTime = Date.now();
@@ -302,9 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 try {
                   const absoluteUrl = new URL(url, baseUrl).href;
-                  const sessionToken = sessionStorage.getItem('proxy-session-token');
-                  return '/api/proxy?url=' + encodeURIComponent(absoluteUrl) + 
-                    (sessionToken ? '&sessionToken=' + encodeURIComponent(sessionToken) : '');
+                  return '/api/proxy?url=' + encodeURIComponent(absoluteUrl);
                 } catch (e) {
                   return url;
                 }

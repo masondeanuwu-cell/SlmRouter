@@ -27,6 +27,9 @@ export default function Login({ onLogin }: LoginProps) {
       if (data.username) {
         sessionStorage.setItem('proxy-username', data.username);
       }
+      if (data.sessionToken) {
+        sessionStorage.setItem('proxy-session-token', data.sessionToken);
+      }
       onLogin();
       toast({
         title: "Login Successful",

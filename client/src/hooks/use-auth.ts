@@ -17,6 +17,8 @@ export function useAuth() {
 
   const logout = () => {
     sessionStorage.removeItem('proxy-authenticated');
+    sessionStorage.removeItem('proxy-username');
+    sessionStorage.removeItem('proxy-session-token');
     setIsAuthenticated(false);
   };
 

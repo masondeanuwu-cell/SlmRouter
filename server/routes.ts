@@ -9,6 +9,22 @@ import fs from 'fs';
 import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session storage for authenticated users
+  const authenticatedSessions = new Map<string, { username: string, loginTime: number }>();
+  
+  // Clean up old sessions (older than 24 hours)
+  const cleanupSessions = () => {
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    for (const [sessionId, session] of authenticatedSessions.entries()) {
+      if (session.loginTime < oneDayAgo) {
+        authenticatedSessions.delete(sessionId);
+      }
+    }
+  };
+  
+  // Run cleanup every hour
+  setInterval(cleanupSessions, 60 * 60 * 1000);
+
   // Load users from JSON file
   const getUsersFromFile = () => {
     try {
@@ -41,7 +57,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (user) {
-        res.json({ success: true, message: "Login successful", username: user.username });
+        // Generate session token
+        const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+        
+        // Store session
+        authenticatedSessions.set(sessionToken, {
+          username: user.username,
+          loginTime: Date.now()
+        });
+        
+        res.json({ 
+          success: true, 
+          message: "Login successful", 
+          username: user.username,
+          sessionToken: sessionToken
+        });
       } else {
         res.status(401).json({ message: "Invalid username or password" });
       }
@@ -114,8 +144,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).end();
   });
 
+  // Authentication middleware for proxy
+  const requireProxyAuth = (req: any, res: any, next: any) => {
+    const sessionToken = req.headers['x-session-token'] || req.query.sessionToken;
+    
+    if (!sessionToken) {
+      return res.status(401).json({ message: "Authentication required. Please log in to use the proxy." });
+    }
+    
+    const session = authenticatedSessions.get(sessionToken);
+    if (!session) {
+      return res.status(401).json({ message: "Invalid or expired session. Please log in again." });
+    }
+    
+    // Check if session is expired (24 hours)
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    if (session.loginTime < oneDayAgo) {
+      authenticatedSessions.delete(sessionToken);
+      return res.status(401).json({ message: "Session expired. Please log in again." });
+    }
+    
+    req.user = session;
+    next();
+  };
+
   // Proxy endpoint - handles all HTTP methods with proper binary content support
-  app.all("/api/proxy", async (req, res) => {
+  app.all("/api/proxy", requireProxyAuth, async (req, res) => {
     const targetUrl = req.query.url as string;
     const method = req.method.toUpperCase();
     const startTime = Date.now();
@@ -248,7 +302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 try {
                   const absoluteUrl = new URL(url, baseUrl).href;
-                  return '/api/proxy?url=' + encodeURIComponent(absoluteUrl);
+                  const sessionToken = sessionStorage.getItem('proxy-session-token');
+                  return '/api/proxy?url=' + encodeURIComponent(absoluteUrl) + 
+                    (sessionToken ? '&sessionToken=' + encodeURIComponent(sessionToken) : '');
                 } catch (e) {
                   return url;
                 }

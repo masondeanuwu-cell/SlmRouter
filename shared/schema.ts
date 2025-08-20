@@ -54,3 +54,10 @@ export type RequestLog = typeof requestLogs.$inferSelect;
 
 export type InsertServerStats = z.infer<typeof insertServerStatsSchema>;
 export type ServerStats = typeof serverStats.$inferSelect;
+
+// Authentication schema
+export const loginSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
+export type LoginRequest = z.infer<typeof loginSchema>;

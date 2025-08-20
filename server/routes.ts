@@ -4,9 +4,27 @@ import { storage } from "./storage";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { URL } from "url";
-import { insertProxyConfigSchema, insertRequestLogSchema } from "@shared/schema";
+import { insertProxyConfigSchema, insertRequestLogSchema, loginSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication endpoints
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const validatedData = loginSchema.parse(req.body);
+      
+      // Simple password check - you can make this more secure
+      const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "admin123";
+      
+      if (validatedData.password === DASHBOARD_PASSWORD) {
+        res.json({ success: true, message: "Login successful" });
+      } else {
+        res.status(401).json({ message: "Invalid password" });
+      }
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid request", error: error.message });
+    }
+  });
+
   // Proxy configuration endpoints
   app.post("/api/proxy-config", async (req, res) => {
     try {

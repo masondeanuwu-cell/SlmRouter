@@ -2,8 +2,11 @@ import ProxyConfig from "@/components/proxy-config";
 import RequestLogs from "@/components/request-logs";
 import Statistics from "@/components/statistics";
 import IframePreview from "@/components/iframe-preview";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Dashboard() {
+  const { logout } = useAuth();
+
   return (
     <div className="bg-slate-50 font-sans text-slate-700 min-h-screen">
       {/* Header */}
@@ -24,9 +27,13 @@ export default function Dashboard() {
               <span className="text-sm text-slate-500">
                 Port: <span className="font-mono font-medium">5000</span>
               </span>
-              <button className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors">
-                <i className="fas fa-cog"></i>
-                <span>Settings</span>
+              <button 
+                onClick={logout}
+                className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                title="Logout"
+              >
+                <i className="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
               </button>
             </div>
           </div>

@@ -4,22 +4,40 @@ import { storage } from "./storage";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { URL } from "url";
-import { insertProxyConfigSchema, insertRequestLogSchema, loginSchema } from "@shared/schema";
+import { insertProxyConfigSchema, insertRequestLogSchema, loginSchema, changePasswordSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication endpoints
+  // Store password in memory (in production, you'd use a secure database)
+  let dashboardPassword = process.env.DASHBOARD_PASSWORD || "admin123";
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const validatedData = loginSchema.parse(req.body);
       
-      // Simple password check - you can make this more secure
-      const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || "admin123";
-      
-      if (validatedData.password === DASHBOARD_PASSWORD) {
+      if (validatedData.password === dashboardPassword) {
         res.json({ success: true, message: "Login successful" });
       } else {
         res.status(401).json({ message: "Invalid password" });
       }
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid request", error: error.message });
+    }
+  });
+
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      const validatedData = changePasswordSchema.parse(req.body);
+      
+      // Verify current password
+      if (validatedData.currentPassword !== dashboardPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      // Update password
+      dashboardPassword = validatedData.newPassword;
+      
+      res.json({ success: true, message: "Password changed successfully" });
     } catch (error: any) {
       res.status(400).json({ message: "Invalid request", error: error.message });
     }

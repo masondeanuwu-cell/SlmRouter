@@ -104,13 +104,6 @@ export default function Login({ onLogin }: LoginProps) {
               )}
             </Button>
           </form>
-          
-          <div className="mt-6 p-3 bg-blue-50 rounded-md border border-blue-200">
-            <p className="text-sm text-blue-700">
-              <i className="fas fa-info-circle mr-2"></i>
-              <strong>Default Password:</strong> <code className="bg-white px-1 rounded">admin123</code>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

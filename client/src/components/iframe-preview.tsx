@@ -42,6 +42,20 @@ export default function IframePreview() {
           </div>
         </div>
       </div>
+      
+      {/* Current URL Display Box */}
+      {currentConfig?.targetUrl && (
+        <div className="mx-6 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <i className="fas fa-link text-slate-500 text-sm"></i>
+            <span className="text-xs text-slate-600 font-medium">Current URL:</span>
+          </div>
+          <div className="mt-1 p-2 bg-white border border-slate-100 rounded font-mono text-sm text-slate-800 break-all">
+            {currentConfig.targetUrl}
+          </div>
+        </div>
+      )}
+      
       <div className="p-6">
         <div className="border border-slate-300 rounded-lg overflow-hidden bg-white" style={{ height: "400px" }}>
           {iframeSrc ? (

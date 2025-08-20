@@ -90,6 +90,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const startTime = Date.now();
 
     if (!targetUrl) {
+      // Log details about the missing URL request for debugging
+      console.log(`Missing URL parameter - Method: ${method}, Referer: ${req.headers.referer}, User-Agent: ${req.headers['user-agent']}, Query:`, req.query);
       await storage.incrementErrorCount();
       return res.status(400).json({ message: "Missing url query parameter" });
     }
@@ -273,31 +275,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 return originalReplace.call(this, rewrittenUrl);
               };
 
-              // Handle form submissions with GET method
+              // Handle form submissions with GET method (like Google search)
               document.addEventListener('submit', function(event) {
                 const form = event.target;
-                if (form.tagName === 'FORM' && form.method.toLowerCase() === 'get') {
-                  event.preventDefault();
-                  const formData = new FormData(form);
-                  const params = new URLSearchParams();
-                  for (const [key, value] of formData.entries()) {
-                    params.append(key, value);
+                if (form.tagName === 'FORM') {
+                  if (form.method.toLowerCase() === 'get') {
+                    event.preventDefault();
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams();
+                    for (const [key, value] of formData.entries()) {
+                      params.append(key, value);
+                    }
+                    const actionUrl = form.action || window.location.href;
+                    const fullUrl = actionUrl + (actionUrl.includes('?') ? '&' : '?') + params.toString();
+                    window.location.href = rewriteUrl(fullUrl);
+                  } else {
+                    // For POST forms, rewrite the action URL
+                    if (form.action && !form.action.startsWith('/api/proxy')) {
+                      form.action = rewriteUrl(form.action);
+                    }
                   }
-                  const actionUrl = form.action || window.location.href;
-                  const fullUrl = actionUrl + (actionUrl.includes('?') ? '&' : '?') + params.toString();
-                  window.location.href = rewriteUrl(fullUrl);
                 }
               }, true);
 
               // Intercept link clicks to handle any missed rewrites
               document.addEventListener('click', function(event) {
                 const link = event.target.closest('a[href]');
-                if (link && !link.href.startsWith('/api/proxy')) {
+                if (link && !link.href.startsWith('/api/proxy') && !link.href.startsWith('javascript:') && !link.href.startsWith('#')) {
                   event.preventDefault();
                   const rewrittenUrl = rewriteUrl(link.href);
                   window.location.href = rewrittenUrl;
                 }
               }, true);
+
+              // Additional interception for any navigation that might be missed
+              window.addEventListener('beforeunload', function(event) {
+                // This won't prevent the navigation but helps us debug
+                console.log('Page unloading, current URL:', window.location.href);
+              });
+
+              // Override pushState and replaceState for single-page apps
+              const originalPushState = history.pushState;
+              const originalReplaceState = history.replaceState;
+              
+              history.pushState = function(state, title, url) {
+                if (url) {
+                  url = rewriteUrl(url);
+                }
+                return originalPushState.call(this, state, title, url);
+              };
+              
+              history.replaceState = function(state, title, url) {
+                if (url) {
+                  url = rewriteUrl(url);
+                }
+                return originalReplaceState.call(this, state, title, url);
+              };
             })();
           </script>
         `;

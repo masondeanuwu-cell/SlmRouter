@@ -1,23 +1,23 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { ProxyConfig, InsertProxyConfig, RequestLog, ServerStats } from "@shared/schema";
+import type { RouterConfig, InsertRouterConfig, RequestLog, ServerStats } from "@shared/schema";
 
-export function useProxy() {
+export function useRouter() {
   const queryClient = useQueryClient();
 
-  // Proxy configuration
+  // Router configuration
   const { data: proxyConfig, isLoading: configLoading } = useQuery({
-    queryKey: ['/api/proxy-config'],
+    queryKey: ['/api/router-config'],
   });
 
   const updateConfigMutation = useMutation({
-    mutationFn: async (config: InsertProxyConfig) => {
-      const response = await apiRequest('POST', '/api/proxy-config', config);
+    mutationFn: async (config: InsertRouterConfig) => {
+      const response = await apiRequest('POST', '/api/router-config', config);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/proxy-config'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/router-config'] });
     },
   });
 

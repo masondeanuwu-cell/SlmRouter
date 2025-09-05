@@ -1,4 +1,4 @@
-# HTTP Proxy Dashboard
+# HTTP Router Dashboard
 
 ## Overview
 
@@ -21,7 +21,7 @@ Preferred communication style: Simple, everyday language.
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
 - **API Design**: RESTful endpoints under `/api` namespace
-- **Proxy Logic**: Custom implementation using Axios for HTTP requests and Cheerio for HTML parsing/rewriting
+- **Router Logic**: Custom implementation using Axios for HTTP requests and Cheerio for HTML parsing/rewriting
 - **Request Logging**: Comprehensive middleware for capturing and logging all proxy traffic
 - **Error Handling**: Centralized error handling with proper HTTP status codes
 

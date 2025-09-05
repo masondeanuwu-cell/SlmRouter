@@ -1,0 +1,327 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Router Server Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-soft': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-700">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-server text-blue-600 text-xl"></i>
+                        <h1 class="text-xl font-semibold text-slate-900">HTTP Router Dashboard</h1>
+                    </div>
+                    <div class="flex items-center space-x-1 px-2 py-1 bg-emerald-100 rounded-full">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-soft"></div>
+                        <span class="text-emerald-700 text-xs font-medium">Server Running</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-slate-500">Port: <span class="font-mono font-medium">3000</span></span>
+                    <button class="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- @COMPONENT: ControlPanel -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Router Configuration Card -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <h2 class="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                        <i class="fas fa-link text-blue-600 mr-2"></i>
+                        Router Configuration
+                    </h2>
+                    
+                    <form class="space-y-4" data-mock="true">
+                        <div>
+                            <label for="target-url" class="block text-sm font-medium text-slate-700 mb-2">Target URL</label>
+                            <input type="url" id="target-url" 
+                                   placeholder="https://example.com" 
+                                   class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   data-bind="proxyConfig.targetUrl">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked data-mock="true">
+                                    <span class="text-sm text-slate-700">Enable Logging</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" data-mock="true">
+                                    <span class="text-sm text-slate-700">CORS Headers</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" 
+                                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center justify-center space-x-2"
+                                data-event="click:handleRouterStart">
+                            <i class="fas fa-play"></i>
+                            <span>Start Router</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Statistics Card -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-emerald-600 mr-2"></i>
+                        Statistics
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-slate-600">Total Requests</span>
+                            <span class="font-semibold text-slate-900" data-bind="stats.totalRequests">1,247</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-slate-600">Active Connections</span>
+                            <span class="font-semibold text-emerald-600" data-bind="stats.activeConnections">3</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-slate-600">Data Transferred</span>
+                            <span class="font-semibold text-slate-900" data-bind="stats.dataTransferred">45.2 MB</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-slate-600">Errors</span>
+                            <span class="font-semibold text-red-600" data-bind="stats.errors">2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                        <i class="fas fa-bolt text-amber-600 mr-2"></i>
+                        Quick Actions
+                    </h3>
+                    
+                    <div class="space-y-2">
+                        <button class="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-md transition-colors flex items-center space-x-2"
+                                data-event="click:clearLogs">
+                            <i class="fas fa-trash-alt text-red-500 w-4"></i>
+                            <span>Clear Logs</span>
+                        </button>
+                        <button class="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-md transition-colors flex items-center space-x-2"
+                                data-event="click:exportLogs">
+                            <i class="fas fa-download text-blue-500 w-4"></i>
+                            <span>Export Logs</span>
+                        </button>
+                        <button class="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-md transition-colors flex items-center space-x-2"
+                                data-event="click:restartServer">
+                            <i class="fas fa-sync-alt text-emerald-500 w-4"></i>
+                            <span>Restart Server</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: ControlPanel -->
+
+            <!-- @COMPONENT: MainContent -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Iframe Preview -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-slate-900 flex items-center">
+                                <i class="fas fa-external-link-alt text-blue-600 mr-2"></i>
+                                Iframe Preview
+                            </h2>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-slate-500 font-mono">proxy?url=https://example.com</span>
+                                <button class="p-1 text-slate-400 hover:text-slate-600">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="border border-slate-300 rounded-lg overflow-hidden bg-white" style="height: 400px;">
+                            <!-- Simulated iframe content -->
+                            <div class="h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                                <div class="text-center">
+                                    <i class="fas fa-globe text-4xl text-blue-400 mb-4"></i>
+                                    <p class="text-slate-600 mb-2">Iframe content will appear here</p>
+                                    <p class="text-sm text-slate-400">Configure a target URL to begin</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request Logs -->
+                <div class="bg-white rounded-xl border border-slate-200">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-slate-900 flex items-center">
+                                <i class="fas fa-list-alt text-emerald-600 mr-2"></i>
+                                Request Logs
+                                <span class="ml-2 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">Live</span>
+                            </h2>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1 text-xs bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition-colors">
+                                    Pause
+                                </button>
+                                <select class="text-xs border border-slate-300 rounded-md px-2 py-1">
+                                    <option>All Methods</option>
+                                    <option>GET</option>
+                                    <option>POST</option>
+                                    <option>PUT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Method</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">URL</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Size</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200">
+                                <!-- @MAP: requestLogs.map(log => ( -->
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">14:32:45</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-900 font-mono max-w-xs truncate">https://example.com/assets/style.css</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">200</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">24.5 KB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">120ms</td>
+                                </tr>
+                                
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">14:32:44</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-900 font-mono max-w-xs truncate">https://example.com/api/data.json</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">200</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">3.2 KB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">95ms</td>
+                                </tr>
+                                
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">14:32:43</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">POST</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-900 font-mono max-w-xs truncate">https://example.com/api/submit</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">404</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">1.1 KB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">200ms</td>
+                                </tr>
+                                
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">14:32:42</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-900 font-mono max-w-xs truncate">https://example.com/images/logo.png</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">200</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">15.8 KB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">85ms</td>
+                                </tr>
+                                
+                                <tr class="hover:bg-slate-50" data-mock="true">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">14:32:41</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GET</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-900 font-mono max-w-xs truncate">https://example.com</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">200</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">45.2 KB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-mono">340ms</td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 text-center">
+                        <p class="text-sm text-slate-500">Showing 5 of 1,247 requests</p>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: MainContent -->
+        </div>
+    </div>
+
+    <script>
+        // TODO: Implement real-time log updates, form submission handling, and server communication
+        
+        (function() {
+            // Mock functionality for demonstration
+            let isLogging = true;
+            let requestCount = 1247;
+            
+            // Simulate real-time updates
+            function simulateLogUpdate() {
+                if (isLogging) {
+                    requestCount++;
+                    // TODO: Update UI with new request logs
+                    // TODO: Update statistics counters
+                }
+            }
+            
+            // Form submission handler
+            document.querySelector('form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // TODO: Implement proxy server communication
+                console.log('Router configuration updated');
+            });
+            
+            // Mock real-time updates every 5 seconds
+            setInterval(simulateLogUpdate, 5000);
+        })();
+    </script>
+</body>
+</html>

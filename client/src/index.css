@@ -5,9 +5,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- Default (Light) Theme --- */
 :root {
-  --background: hsl(210, 20%, 98%);
-  --foreground: hsl(215, 16%, 47%);
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(216, 16%, 46%);
   --card: hsl(0, 0%, 100%);
   --card-foreground: hsl(222, 84%, 5%);
   --popover: hsl(0, 0%, 100%);
@@ -35,6 +36,7 @@
   --radius: 0.5rem;
 }
 
+/* --- Dark Theme --- */
 .dark {
   --background: hsl(222, 84%, 5%);
   --foreground: hsl(210, 40%, 98%);
@@ -62,6 +64,56 @@
   --chart-5: hsl(340, 75%, 55%);
 }
 
+/* --- Rainbow Theme --- */
+.rainbow {
+  --background: linear-gradient(270deg, #ff0080, #ff8c00, #40e0d0, #8a2be2);
+  background-size: 600% 600%;
+  animation: rainbowBackground 15s ease infinite;
+}
+
+/* Animate Rainbow Button */
+.btn-rainbow {
+  background: linear-gradient(270deg, #ff0080, #ff8c00, #40e0d0, #8a2be2);
+  background-size: 600% 600%;
+  animation: rainbowButton 8s ease infinite;
+  color: white;
+  border: none;
+}
+
+@keyframes rainbowBackground {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes rainbowButton {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.server-logo {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background: url("/favicon.ico") no-repeat center center;
+  background-size: contain;
+}
+
+.center-div {
+  width: 100%; /* Or any specific width */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  align-items: center;     /* center vertically */
+  min-height: 100vh;       /* full viewport height */
+}
+
+/* --- Base Styles --- */
 @layer base {
   * {
     @apply border-border;

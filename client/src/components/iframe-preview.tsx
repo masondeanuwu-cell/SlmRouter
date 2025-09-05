@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 
 export default function IframePreview() {
   const [iframeSrc, setIframeSrc] = useState("");
-  
+
   const { data: currentConfig } = useQuery({
-    queryKey: ['/api/proxy-config'],
+    queryKey: ['/api/router-config'],
   });
 
   useEffect(() => {
     if (currentConfig?.targetUrl) {
-      setIframeSrc(`/api/proxy?url=${encodeURIComponent(currentConfig.targetUrl)}`);
+      setIframeSrc(`/api/router?url=${btoa(encodeURIComponent(currentConfig.targetUrl))}`);
     }
   }, [currentConfig]);
 
@@ -26,7 +26,7 @@ export default function IframePreview() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
             <i className="fas fa-external-link-alt text-blue-600 mr-2"></i>
-            Iframe Preview
+            Site Preview
           </h2>
           <div className="flex items-center space-x-2">
             <span className="text-xs text-slate-500 font-mono">
@@ -43,7 +43,7 @@ export default function IframePreview() {
         </div>
       </div>
       
-      {/* Current URL Display Box */}
+
       {currentConfig?.targetUrl && (
         <div className="mx-6 mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
           <div className="flex items-center space-x-2">
@@ -62,7 +62,7 @@ export default function IframePreview() {
             <iframe 
               src={iframeSrc}
               className="w-full h-full border-0"
-              title="Proxy Preview"
+              title="Router Preview"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             />
           ) : (

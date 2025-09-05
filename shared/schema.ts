@@ -31,7 +31,7 @@ export const serverStats = pgTable("server_stats", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertProxyConfigSchema = createInsertSchema(proxyConfigs).omit({
+export const insertRouterConfigSchema = createInsertSchema(proxyConfigs).omit({
   id: true,
   createdAt: true,
 });
@@ -46,8 +46,8 @@ export const insertServerStatsSchema = createInsertSchema(serverStats).omit({
   updatedAt: true,
 });
 
-export type InsertProxyConfig = z.infer<typeof insertProxyConfigSchema>;
-export type ProxyConfig = typeof proxyConfigs.$inferSelect;
+export type InsertRouterConfig = z.infer<typeof insertRouterConfigSchema>;
+export type RouterConfig = typeof proxyConfigs.$inferSelect;
 
 export type InsertRequestLog = z.infer<typeof insertRequestLogSchema>;
 export type RequestLog = typeof requestLogs.$inferSelect;
@@ -57,6 +57,7 @@ export type ServerStats = typeof serverStats.$inferSelect;
 
 // Authentication schema
 export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 

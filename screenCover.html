@@ -1,0 +1,70 @@
+<!-- DRM Demo Embed -->
+<div id="drm-banner" style="display:none;
+  position:fixed;top:0;left:0;width:100%;
+  background:red;color:white;font-size:24px;
+  font-weight:bold;text-align:center;padding:10px;
+  z-index:9999;">
+  PAGE VISIBLE
+</div>
+<!-- Shaka Player library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.10.10/shaka-player.compiled.min.js"></script>
+<video id="screenCover"></video>
+<script>
+async function exe(){
+  let manifestUri = "";
+  let licenseServers = {};
+  const ua = navigator.userAgent.toLowerCase();
+
+  if (ua.includes("safari") && !ua.includes("chrome")) {
+    // Default: Widevine demo
+    manifestUri = "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine/dash.mpd";
+    licenseServers = {
+      "com.widevine.alpha": "https://cwip-shaka-proxy.appspot.com/no_auth"
+    };
+
+
+  // Insert a fullscreen invisible looping video element
+  let video = document.getElementById("screenCover");
+  video.loop = true; // ✅ loop
+  Object.assign(video, {
+    autoplay: true,
+    controls: true,
+    playsinline: true
+  });
+  Object.assign(video.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100vw",
+    height: "100vh",
+    objectFit: "cover",
+    zIndex: "9998",
+    pointerEvents: "none", // click passthrough
+    opacity: "100"           // fully invisible
+  });
+
+  // Init Shaka
+  if (!shaka.Player.isBrowserSupported()) {
+    document.getElementById("drm-banner").style.display = "block";
+    return;
+  }
+  const player = new shaka.Player(video);
+  player.configure({ drm: { servers: licenseServers } });
+  player.addEventListener("error", () =>
+    document.getElementById("drm-banner").style.display = "block"
+  );
+  video.addEventListener("error", () =>
+    document.getElementById("drm-banner").style.display = "block"
+  );
+
+  try {
+    await player.load(manifestUri);
+    video.playbackRate = 3; // ✅ slow playback
+    console.log("DRM video loaded and looping successfully.");
+  } catch (e) {
+    console.log("DRM load failed", e);
+    document.getElementById("drm-banner").style.display = "block";
+  }
+}};
+exe();
+</script>

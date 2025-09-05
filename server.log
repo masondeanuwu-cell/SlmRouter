@@ -1,0 +1,186 @@
+[2025-08-26T01:52:55.483Z] Logger initialized — server startup log file cleared!
+[2025-08-26T01:52:55.609Z] 1:52:55 AM [express] serving on port 5000
+[2025-08-26T01:52:59.261Z] ERROR: [2m1:52:59 AM[22m [31m[1m[vite][22m[39m Pre-transform error: /home/runner/workspace/client/src/components/log-viewer.tsx: Adjacent JSX elements must be wrapped in an enclosing tag. Did you want a JSX fragment <>...</>? (24:4)
+
+[0m [90m 22 |[39m       [33m<[39m[33m/[39m[33mh[39m[33m>[39m
+ [90m 23 |[39m     [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+[31m[1m>[22m[39m[90m 24 |[39m     [33m<[39m[33mdiv[39m className[33m=[39m[32m"p-4 bg-slate-50 min-h-screen"[39m[33m>[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 25 |[39m       [33m<[39m[33mh1[39m className[33m=[39m[32m"text-xl font-bold mb-4"[39m[33m>[39m[33mServer[39m [33mLogs[39m[33m<[39m[33m/[39m[33mh1[39m[33m>[39m
+ [90m 26 |[39m       [33m<[39m[33mpre[39m className[33m=[39m[32m"bg-black text-green-400 p-4 rounded overflow-auto max-h-[80vh]"[39m[33m>[39m
+ [90m 27 |[39m         {logs}[0m
+[2025-08-26T02:11:27.867Z] 2:11:27 AM [express] serving on port 5000
+[2025-08-26T02:11:33.849Z] 2:11:33 AM [express] GET /api/router-config 304 in 2ms
+[2025-08-26T02:11:33.850Z] 2:11:33 AM [express] GET /api/server-stats 200 in 0ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:33.852Z] 2:11:33 AM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T02:11:36.268Z] 2:11:36 AM [express] GET /api/server-stats 304 in 0ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:39.290Z] 2:11:39 AM [express] GET /api/server-stats 304 in 0ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:40.271Z] 2:11:40 AM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T02:11:41.473Z] 2:11:41 AM [express] GET /api/server-stats 304 in 1ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:42.277Z] 2:11:42 AM [express] GET /api/router-config 304 in 0ms
+[2025-08-26T02:11:43.360Z] 2:11:43 AM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T02:11:43.569Z] 2:11:43 AM [express] GET /api/server-stats 304 in 1ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:45.695Z] 2:11:45 AM [express] GET /api/server-stats 304 in 1ms :: {"id":"9925cbd7-2ea4-4eed-b4ae-94729d24a591","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T02:11:27.495Z"}
+[2025-08-26T02:11:46.451Z] 2:11:46 AM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T02:11:47.370Z] 2:11:47 AM [express] GET /api/router-config 304 in 0ms
+[2025-08-26T10:32:55.102Z] 10:32:55 AM [express] serving on port 5000
+[2025-08-26T14:23:23.908Z] 2:23:23 PM [express] serving on port 5000
+[2025-08-26T14:25:03.229Z] 2:25:03 PM [express] serving on port 5000
+[2025-08-26T14:25:16.332Z] recived hash: 2f76b57bb7eae100a8effe7e1237f1316aff987473af01c0767c97e388a8487f (masondean10)
+
+
+
+[2025-08-26T14:25:16.338Z] 2:25:16 PM [express] POST /api/auth/login 200 in 7ms :: {"success":true,"message":"Login successful"}
+[2025-08-26T14:25:16.558Z] 2:25:16 PM [express] GET /api/router-config 200 in 2ms
+[2025-08-26T14:25:16.559Z] 2:25:16 PM [express] GET /api/request-logs 200 in 1ms :: []
+[2025-08-26T14:25:16.561Z] 2:25:16 PM [express] GET /api/server-stats 200 in 1ms :: {"id":"7fd0e628-1880-422f-8dc0-a33f3bd51561","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:25:02.809Z"}
+[2025-08-26T14:25:18.686Z] 2:25:18 PM [express] GET /api/server-stats 304 in 0ms :: {"id":"7fd0e628-1880-422f-8dc0-a33f3bd51561","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:25:02.809Z"}
+[2025-08-26T14:25:19.677Z] 2:25:19 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:25:20.796Z] 2:25:20 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"7fd0e628-1880-422f-8dc0-a33f3bd51561","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:25:02.809Z"}
+[2025-08-26T14:25:21.675Z] 2:25:21 PM [express] GET /api/router-config 304 in 1ms
+[2025-08-26T14:25:22.778Z] 2:25:22 PM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T14:25:22.904Z] 2:25:22 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"7fd0e628-1880-422f-8dc0-a33f3bd51561","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:25:02.809Z"}
+[2025-08-26T14:25:25.005Z] 2:25:25 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"7fd0e628-1880-422f-8dc0-a33f3bd51561","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:25:02.809Z"}
+[2025-08-26T14:25:25.878Z] 2:25:25 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:25:37.887Z] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2025-08-26T14:25:37.896Z] [2m2:25:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/dashboard.tsx, /src/index.css?v=E0O1BOuaB8uYr-J440-Bk[22m
+[2025-08-26T14:25:40.051Z] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2025-08-26T14:25:40.052Z] [2m2:25:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/dashboard.tsx, /src/index.css?v=E0O1BOuaB8uYr-J440-Bk[22m [33m(x2)[39m
+[2025-08-26T14:25:42.766Z] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2025-08-26T14:25:42.767Z] [2m2:25:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/dashboard.tsx, /src/index.css?v=E0O1BOuaB8uYr-J440-Bk[22m [33m(x3)[39m
+[2025-08-26T14:25:42.919Z] 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2025-08-26T14:30:52.989Z] 2:30:52 PM [express] serving on port 5000
+[2025-08-26T14:31:00.120Z] 2:31:00 PM [express] GET /api/router-config 304 in 2ms
+[2025-08-26T14:31:00.122Z] 2:31:00 PM [express] GET /api/server-stats 200 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:00.123Z] 2:31:00 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:31:02.241Z] 2:31:02 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:03.238Z] 2:31:03 PM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T14:31:04.327Z] 2:31:04 PM [express] GET /api/logs 200 in 4ms
+[2025-08-26T14:31:04.335Z] 2:31:04 PM [express] GET /api/server-stats 304 in 0ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:05.254Z] 2:31:05 PM [express] GET /api/router-config 304 in 0ms
+[2025-08-26T14:31:06.339Z] 2:31:06 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:31:06.444Z] 2:31:06 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:14.551Z] 2:31:14 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:15.353Z] 2:31:15 PM [express] GET /api/router-config 304 in 1ms
+[2025-08-26T14:31:15.444Z] 2:31:15 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:31:16.657Z] 2:31:16 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:18.560Z] 2:31:18 PM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T14:31:18.759Z] 2:31:18 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:20.456Z] 2:31:20 PM [express] GET /api/router-config 304 in 0ms
+[2025-08-26T14:31:20.857Z] 2:31:20 PM [express] GET /api/server-stats 304 in 0ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:21.669Z] 2:31:21 PM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T14:31:22.950Z] 2:31:22 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:24.782Z] 2:31:24 PM [express] GET /api/request-logs 304 in 0ms :: []
+[2025-08-26T14:31:25.055Z] 2:31:25 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:25.556Z] 2:31:25 PM [express] GET /api/router-config 304 in 1ms
+[2025-08-26T14:31:27.151Z] 2:31:27 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}
+[2025-08-26T14:31:27.886Z] 2:31:27 PM [express] GET /api/request-logs 304 in 1ms :: []
+[2025-08-26T14:31:29.253Z] 2:31:29 PM [express] GET /api/server-stats 304 in 1ms :: {"id":"ff40fce0-c43e-4a6d-9c05-80b4773f3a17","totalRequests":0,"activeConnections":0,"dataTransferred":0,"errors":0,"updatedAt":"2025-08-26T14:30:52.450Z"}

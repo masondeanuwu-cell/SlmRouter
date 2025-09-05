@@ -1,10 +1,10 @@
-import { type ProxyConfig, type InsertProxyConfig, type RequestLog, type InsertRequestLog, type ServerStats, type InsertServerStats } from "@shared/schema";
+import { type RouterConfig, type InsertRouterConfig, type RequestLog, type InsertRequestLog, type ServerStats, type InsertServerStats } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
-  // Proxy Config methods
-  createProxyConfig(config: InsertProxyConfig): Promise<ProxyConfig>;
-  getLatestProxyConfig(): Promise<ProxyConfig | undefined>;
+  // Router Config methods
+  createRouterConfig(config: InsertRouterConfig): Promise<RouterConfig>;
+  getLatestRouterConfig(): Promise<RouterConfig | undefined>;
   
   // Request Log methods
   createRequestLog(log: InsertRequestLog): Promise<RequestLog>;
@@ -21,7 +21,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private proxyConfigs: Map<string, ProxyConfig>;
+  private proxyConfigs: Map<string, RouterConfig>;
   private requestLogs: Map<string, RequestLog>;
   private serverStats: ServerStats;
 
@@ -38,9 +38,9 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async createProxyConfig(insertConfig: InsertProxyConfig): Promise<ProxyConfig> {
+  async createRouterConfig(insertConfig: InsertRouterConfig): Promise<RouterConfig> {
     const id = randomUUID();
-    const config: ProxyConfig = {
+    const config: RouterConfig = {
       ...insertConfig,
       id,
       createdAt: new Date(),
@@ -49,7 +49,7 @@ export class MemStorage implements IStorage {
     return config;
   }
 
-  async getLatestProxyConfig(): Promise<ProxyConfig | undefined> {
+  async getLatestRouterConfig(): Promise<RouterConfig | undefined> {
     const configs = Array.from(this.proxyConfigs.values()).sort(
       (a, b) => b.createdAt!.getTime() - a.createdAt!.getTime()
     );

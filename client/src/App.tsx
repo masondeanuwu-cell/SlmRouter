@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,10 +7,14 @@ import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import LogViewer from "@/components/log-viewer";
+import Browser from "./pages/Browser";
+import { ThemeProvider } from "@/components/theme-provider";
+import UserLogin from "./pages/slm-login";
 
 function Router() {
   const { isAuthenticated, isLoading, login } = useAuth();
-
+  const [location] = useLocation();
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -22,13 +26,17 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && location !== "/slmbrowser") {
     return <Login onLogin={login} />;
+  }else if (!isAuthenticated && location === "/slmbrowser") {
+    return <UserLogin onLogin={login} />;
   }
 
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/logs" component={LogViewer} /> {/* NEW */}
+      <Route path="/slmbrowser" component={Browser} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -36,12 +44,14 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

@@ -12,25 +12,26 @@ interface LoginProps {
   onLogin: () => void;
 }
 
-export default function Login({ onLogin }: LoginProps) {
-    const [username, setUsername] = useState("");
+export default function UserLogin({ onLogin }: LoginProps) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
-      const response = await apiRequest('POST', '/api/auth/login', data);
+      const response = await apiRequest('POST', '/api/auth/user-login', data);
       return response.json();
     },
     onSuccess: () => {
-      sessionStorage.setItem('proxy-authenticated', 'true');
+      sessionStorage.setItem('browser-authenticated', 'true');
       onLogin();
       toast({
         title: "Login Successful",
-        description: "Welcome to the HTTP Router Dashboard",
+        description: "Welcome to the SlmBrowser",
       });
     },
     onError: (error: any) => {
+      console.error(error.message);
       toast({
         title: "Login Failed",
         description: error.message || "Invalid credentials",
@@ -42,11 +43,11 @@ export default function Login({ onLogin }: LoginProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!password) {
+    if (!username || !password) {
       toast({
-        title: "Admin Credentials Required",
+        title: "Credentials Required",
         description: "Please enter both username and password to continue",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -64,10 +65,13 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-slate-900">
-            HTTP Router Dashboard
+            SlmBrowser Login
           </CardTitle>
           <CardDescription className="text-slate-600">
-            Are you a user? Naviate to <a href="/slmbrowser" className="text-blue-600 hover:underline">User Login</a>. Admin? Enter your username and password to access the proxy control panel
+            Welcome to the SlmBrowser Login Page. Admin? Navigate to <a href="/" className="text-blue-600 hover:underline">Admin Login</a>. Please enter your Username and Password to continue.
+          </CardDescription>
+          <CardDescription className="text-red-600 bold">
+            NOTE: Device names are tracked! Using another users credientials will cancel your credentials!
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,12 +98,11 @@ export default function Login({ onLogin }: LoginProps) {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter dashboard password"
+                placeholder="Enter user password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full"
                 disabled={loginMutation.isPending}
-                autoFocus
               />
             </div>
             <Button
@@ -115,7 +118,7 @@ export default function Login({ onLogin }: LoginProps) {
               ) : (
                 <>
                   <i className="fas fa-unlock mr-2"></i>
-                  Access Dashboard
+                  Access Browser
                 </>
               )}
             </Button>

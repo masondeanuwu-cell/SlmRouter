@@ -44,7 +44,7 @@ const PORT = 3000;
 
 ---
 
-### 3. **Proxy route to fetch and rewrite HTML**
+### 3. **Router route to fetch and rewrite HTML**
 
 ```js
 app.get('/proxy', async (req, res) => {
@@ -122,7 +122,7 @@ You can add middleware to log all proxied requests:
 
 ```js
 app.use('/proxy', (req, res, next) => {
-    console.log(`Proxying request to: ${req.query.url}`);
+    console.log(`Routering request to: ${req.query.url}`);
     next();
 });
 ```

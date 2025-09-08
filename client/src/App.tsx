@@ -11,6 +11,7 @@ import LogViewer from "@/components/log-viewer";
 import Browser from "./pages/Browser";
 import { ThemeProvider } from "@/components/theme-provider";
 import UserLogin from "./pages/slm-login";
+import LandingPage from "@/pages/Landing-page";
 
 function Router() {
   const { isAuthenticated, isLoading, login } = useAuth();
@@ -26,7 +27,7 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated && location !== "/slmbrowser") {
+  if (!isAuthenticated && location === "/dashboard") {
     return <Login onLogin={login} />;
   }else if (!isAuthenticated && location === "/slmbrowser") {
     return <UserLogin onLogin={login} />;
@@ -34,9 +35,10 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={LandingPage} />
       <Route path="/logs" component={LogViewer} /> {/* NEW */}
       <Route path="/slmbrowser" component={Browser} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

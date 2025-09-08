@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import axios from "axios";
+import nodemailer from "nodemailer";
 import * as cheerio from "cheerio";
 import { URL } from "url";
 import {
@@ -18,7 +19,7 @@ import { networkInterfaces } from "os";
 import { exec } from "child_process";
 import path from "path";
 import users from "./user-logins.json";
-import components from "../components.json";
+import componets from "../components.json";
 
 function runCommand(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -205,6 +206,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ uptime: formatUptime(uptimeMs) });
   });
 
+  // Landing page signup: save request and email admin
+  app.post('/api/signup', async (req, res) => {
+    try {
+      const payload = req.body || {};
+
+      const entry = {
+        id: Date.now().toString(),
+        ...payload,
+        createdAt: new Date().toISOString(),
+      };
+
+      // persist to server/signups.json
+      const signupsPath = path.join('server', 'signups.json');
+      let list: any[] = [];
+      if (fs.existsSync(signupsPath)) {
+        try {
+          const raw = fs.readFileSync(signupsPath, 'utf-8') || '[]';
+          list = JSON.parse(raw || '[]');
+          if (!Array.isArray(list)) list = [];
+        } catch (e) {
+          list = [];
+        }
+      }
+      list.push(entry);
+      fs.writeFileSync(signupsPath, JSON.stringify(list, null, 2), 'utf-8');
+
+  // Send email to admin with request details
+  const toEmail = process.env.ADMIN_EMAIL || 'masondeanuwu@gmail.com';
+
+      // SMTP configuration from environment
+      const smtpHost = process.env.SMTP_HOST;
+      const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined;
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      const smtpSecure = process.env.SMTP_SECURE === 'true';
+
+      if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+        console.error('SMTP configuration missing. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.');
+        return res.status(500).json({ message: `SMTP not configured on server; cannot send email, ${JSON.stringify({ smtpHost, smtpPort, smtpUser, smtpPass })}` });
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure || (smtpPort === 465),
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      const plain = `New signup request received:\n\n${JSON.stringify(entry, null, 2)}\n\nReceived at: ${entry.createdAt}`;
+      const html = `<h2>New signup request</h2><pre style="white-space:pre-wrap;background:#f4f4f4;padding:10px;border-radius:6px">${JSON.stringify(entry, null, 2)}</pre><p>Received at: ${entry.createdAt}</p>`;
+
+      await transporter.sendMail({
+        from: `${smtpUser}`,
+        to: toEmail,
+        subject: `SLM Router - New signup request from ${payload.fullName || 'unknown'}`,
+        text: plain,
+        html,
+      });
+
+      res.status(201).json({ success: true, message: 'Signup saved and email sent' });
+    } catch (err: any) {
+      console.error('Signup handler error:', err);
+      res.status(500).json({ message: 'Server error saving signup' });
+    }
+  });
+
+  // Return saved signup requests (admin view)
+  app.get('/api/signups', async (req, res) => {
+    try {
+      const signupsPath = path.join('server', 'signups.json');
+      if (!fs.existsSync(signupsPath)) return res.json([]);
+      const raw = fs.readFileSync(signupsPath, 'utf-8') || '[]';
+      const list = JSON.parse(raw || '[]');
+      return res.json(Array.isArray(list) ? list : []);
+    } catch (err: any) {
+      console.error('Failed to read signups.json', err);
+      res.status(500).json({ message: 'Failed to read signups', error: err?.message || String(err) });
+    }
+  });
+
+  // Fetch metadata (title + favicon) for a given URL. Client should pass an encoded URL.
+  app.get('/api/meta', async (req, res) => {
+    try {
+      const raw = String(req.query.url || "");
+      if (!raw) return res.status(400).json({ message: 'Missing url query param' });
+
+      // Accept either an encoded URL or a base64 input
+      let target = Buffer.from(raw, 'base64').toString('utf-8');
+      try {
+        // try decodeURIComponent first
+        target = decodeURIComponent(target);
+      } catch (e) {
+        // ignore
+      }
+
+      // If it looks like base64 (only A-Za-z0-9+/= and no ://), attempt to decode
+      if (!/^https?:\/\//i.test(target) && /^[A-Za-z0-9+/=]+$/.test(raw)) {
+        try {
+          target = Buffer.from(raw, 'base64').toString('utf-8');
+        } catch (e) {}
+      }
+
+      if (!/^https?:\/\//i.test(target)) {
+        return res.status(400).json({ message: 'Invalid url format', url: target });
+      }
+
+      const response = await axios.get(target, {
+        timeout: 8000,
+        headers: {
+          'User-Agent': 'SlmRouter/MetaFetcher (+https://slmrouter.local)'
+        },
+        responseType: 'text'
+      });
+
+      const $ = cheerio.load(response.data || '');
+      const title = $('title').first().text().trim() || null;
+
+      // attempt to find favicon links
+      let favicon: string | null = null;
+      const candidates = [] as string[];
+      $('link').each((_, el) => {
+        const rel = ($(el).attr('rel') || '').toLowerCase();
+        const href = $(el).attr('href') || '';
+        if (!href) return;
+        if (rel.includes('icon') || rel.includes('shortcut') || rel.includes('apple-touch-icon')) {
+          candidates.push(href);
+        }
+      });
+      // fallback to /favicon.ico
+      if (candidates.length === 0) candidates.push('/favicon.ico');
+
+      for (const c of candidates) {
+        try {
+          const abs = new URL(c, target).href;
+          // quick HEAD to see if exists (skip for now to save requests) — just return first
+          favicon = abs;
+          break;
+        } catch (e) {
+          continue;
+        }
+      }
+
+      return res.json({ title, favicon });
+    } catch (err: any) {
+      console.error('meta fetch error', err?.message || err);
+      return res.status(500).json({ message: 'Failed to fetch meta', error: err?.message || String(err) });
+    }
+  });
+
+  // Delete a signup by id
+  app.delete('/api/signups/:id', async (req, res) => {
+    try {
+      const id = req.params.id;
+      if (!id) return res.status(400).json({ message: 'Missing id parameter' });
+
+      const signupsPath = path.join('server', 'signups.json');
+      if (!fs.existsSync(signupsPath)) return res.status(404).json({ message: 'No signups file' });
+
+      const raw = fs.readFileSync(signupsPath, 'utf-8') || '[]';
+      let list: any[] = [];
+      try {
+        list = JSON.parse(raw || '[]');
+        if (!Array.isArray(list)) list = [];
+      } catch (e) {
+        list = [];
+      }
+
+      const index = list.findIndex((it: any) => String(it.id) === String(id) || String(it._id) === String(id));
+      if (index === -1) return res.status(404).json({ message: 'Signup not found' });
+
+      // remove the item
+      list.splice(index, 1);
+
+      // write back
+      fs.writeFileSync(signupsPath, JSON.stringify(list, null, 2), 'utf-8');
+
+      return res.json({ success: true, message: 'Signup deleted' });
+    } catch (err: any) {
+      console.error('Failed to delete signup', err);
+      return res.status(500).json({ message: 'Failed to delete signup', error: err?.message || String(err) });
+    }
+  });
+
+  
+  
+  app.get("/api/browse", async (req, res) => {
+    /* legacy code to serve browser.html
+    const filePath = "client/src/pages/browser.html";
+    try {
+      const html = await fs.promises.readFile(filePath, "utf-8");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(html);
+    } catch (err) {
+      res.status(404).send("browser.html not found");
+    }
+    */ // serve react app instead
+    const filePath = "/home/mason/Downloads/FrameRouter/client/src/pages/Browser.tsx";
+    res.sendFile(filePath);
+  });
   app.post("/api/execute", async (req, res) => {
     try {
       const { command, password } = req.body;
@@ -335,7 +538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers: requestHeaders,
         timeout: 30000,
         maxRedirects: 10,
-        responseType: "arraybuffer", // Keep binary safe
+        // Use streaming so large binaries (videos, large downloads) are
+        // proxied without buffering the entire file into Node's heap.
+        responseType: "stream",
         validateStatus: () => true,
       };
 
@@ -343,109 +548,274 @@ export async function registerRoutes(app: Express): Promise<Server> {
         axiosConfig.data = req.body;
       }
 
-      const response = await axios(axiosConfig);
-      const contentType = response.headers["content-type"] || "";
+  const response = await axios(axiosConfig);
+  const contentType = (response.headers && (response.headers["content-type"] || response.headers["Content-Type"])) || "";
 
-      // 🔹 Forward headers (preserve rendering)
-      res.status(response.status);
-      Object.entries(response.headers).forEach(([key, value]) => {
-        if (
-          !["content-length", "transfer-encoding"].includes(key.toLowerCase())
-        ) {
-          res.setHeader(key, value as string);
+      // Detect common static resource extensions (js, mjs, wasm) and
+      // override incorrect upstream Content-Type headers (some sites
+      // erroneously serve JS as text/html). This prevents browser strict
+      // MIME type errors for module scripts.
+      let overrideContentType: string | null = null;
+      try {
+        const parsed = new URL(targetUrl);
+        const ext = path.extname(parsed.pathname || "").toLowerCase();
+        if ((ext === ".js" || ext === ".mjs") && contentType.includes("text/html")) {
+          overrideContentType = "application/javascript; charset=utf-8";
         }
-      });
-
-      // 🔹 If NOT HTML, send raw buffer
-      if (!contentType.includes("text/html")) {
-        return res.send(response.data);
+        if (ext === ".wasm" && contentType.includes("text/html")) {
+          overrideContentType = "application/wasm";
+        }
+      } catch (e) {
+        // ignore URL parse errors
       }
 
+  // 🔹 Forward headers (preserve rendering) but apply any overrides and
+  // strip framing protections that would prevent embedding in our iframe.
+  res.status(response.status);
+  Object.entries(response.headers).forEach(([key, value]) => {
+        const k = key.toLowerCase();
+        // skip these hop-by-hop headers
+        if (["content-length", "transfer-encoding"].includes(k)) return;
+
+        // Remove X-Frame-Options (DENY / SAMEORIGIN) so our iframe can render.
+        // Also log if upstream explicitly set DENY so it's clear why it was dropped.
+        if (k === 'x-frame-options' || k === 'frame-options') {
+          const val = String(value || '').toLowerCase();
+          if (val.includes('deny')) console.log('Dropping X-Frame-Options: DENY for', targetUrl);
+          else console.log('Stripping header X-Frame-Options for', targetUrl, 'value=', value);
+          return;
+        }
+
+        // Remove Content-Security-Policy headers (including Report-Only variants)
+        if (k.includes('content-security-policy') || k === 'x-webkit-csp') {
+          console.log('Dropping CSP header (or Report-Only) for', targetUrl, 'header=', key);
+          return;
+        }
+
+        // Apply content-type override for JS/WASM when needed
+        if (k === 'content-type' && overrideContentType) {
+          res.setHeader('content-type', overrideContentType);
+          return;
+        }
+
+        // otherwise forward header as-is
+        res.setHeader(key, value as string);
+      });
+
+      // 🔹 If NOT HTML, stream the response directly to the client (avoid buffering)
+      if (!contentType.includes("text/html")) {
+        try {
+          const stream = response.data as NodeJS.ReadableStream;
+          // ensure headers already set above; pipe and return
+          stream.pipe(res);
+          return;
+        } catch (e) {
+          // fallback to sending whatever axios provided (may throw)
+          return res.send(response.data);
+        }
+      }
+      res.setHeader("X-Content-Type-Options", "nosniff");
       // ---------- HTML REWRITE LOGIC ----------
-      const rawHtml = response.data.toString("utf-8");
+      // Collect the HTML stream into a string for rewriting
+      let rawHtml = "";
+      try {
+        const chunks: Buffer[] = [];
+        const stream = response.data as NodeJS.ReadableStream;
+        await new Promise<void>((resolve, reject) => {
+          stream.on('data', (c: any) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(String(c))));
+          stream.on('end', () => resolve());
+          stream.on('error', (err: any) => reject(err));
+        });
+        rawHtml = Buffer.concat(chunks).toString('utf-8');
+      } catch (e) {
+        // If stream collection fails, fallback to an empty string so rewrite doesn't crash
+        rawHtml = '';
+      }
       // Replace all target="_blank" with target="_self"
       const rewrittenHtml = rawHtml.replace(/target="_blank"/gi, 'target="_self"');
-      const $ = cheerio.load(rewrittenHtml, { decodeEntities: false });
+  const $ = cheerio.load(rewrittenHtml);
       // Helper to Base64 encode URLs safely
       const toBase64 = (url: string) =>
         Buffer.from(url, "utf-8").toString("base64");
 
-      // Rewrite URLs
+      // Remove meta X-Frame-Options tags (some pages include this in HTML)
+      try {
+        $('meta[http-equiv]').each((_, el) => {
+          const http = ($(el).attr('http-equiv') || '').toLowerCase();
+          if (http === 'x-frame-options') $(el).remove();
+        });
+      } catch (e) {
+        // ignore
+      }
+
+      // Remove <link rel="preload"> tags — many sites preload large media or fonts
+      // which can trigger "preloaded but not used" warnings when proxied. Removing
+      // these reduces wasted requests and browser console noise.
+      try {
+        $('link[rel~="preload"]').remove();
+      } catch (e) {}
+
+      // Sanitize inline scripts to remove common frame-busting patterns
+      try {
+        $('script:not([src])').each((_, el) => {
+          try {
+            const code = $(el).html() || '';
+            if (!code) return;
+            // Replace attempts to navigate top/parent or check framing
+            let safe = code
+              .replace(/top\.location/g, '/* suppressed top.location */')
+              .replace(/parent\.location/g, '/* suppressed parent.location */')
+              .replace(/window\.top/g, 'window.self')
+              .replace(/window\.frameElement/g, 'null')
+              .replace(/frameElement/g, 'null')
+              .replace(/if\s*\(\s*self\s*(!==|!=)\s*top\s*\)/g, 'if(false)')
+              .replace(/if\s*\(\s*top\s*!==\s*self\s*\)/g, 'if(false)');
+            // Overwrite the inline script with sanitized version
+            $(el).text(safe);
+          } catch (e) {}
+        });
+      } catch (e) {
+        // ignore
+      }
+
+  // Build absolute proxy prefix so rewritten URLs always point to our proxy
+  const proxyPrefix = `${req.protocol}://${req.get('host')}`;
+
+  // Rewrite URLs
+      // Helper: rewrite attributes like href/action/src using the targetUrl as base
       const rewriteAttr = (selector: string, attr: string) => {
         $(selector).each((_, el) => {
           const val = $(el).attr(attr);
-          if (val && !val.startsWith("javascript:") && !val.startsWith("#")) {
+          if (!val) return;
+          const low = String(val).trim();
+          if (low.startsWith('javascript:') || low.startsWith('#') || low.startsWith('data:') || low.startsWith('mailto:')) return;
+          try {
             const absoluteUrl = new URL(val, targetUrl).href;
-            $(el).attr(attr, `/api/router?url=${toBase64(absoluteUrl)}`);
+            $(el).attr(attr, `${proxyPrefix}/api/router?url=${toBase64(absoluteUrl)}`);
+          } catch (e) {
+            // leave as-is on parse errors
           }
         });
       };
 
-      rewriteAttr("a[href]", "href");
-      rewriteAttr("link[href]", "href");
-      rewriteAttr("script[src]", "src");
-      rewriteAttr("img[src]", "src");
-      rewriteAttr("form[action]", "action");
+      // Basic href/action rewrites
+      rewriteAttr('a[href]', 'href');
+      rewriteAttr('link[href]', 'href');
+      rewriteAttr('form[action]', 'action');
 
-      // Inject interception script
+      // Rewrite all src attributes (img, script, iframe, video, audio, source, embed, etc.)
+      // but do NOT proxy video files — leave them as absolute remote URLs so
+      // the browser can stream them directly.
+      const videoExts = ['.mp4', '.webm', '.ogg', '.m3u8', '.mpd', '.mov'];
+      $('[src]').each((_, el) => {
+        const val = $(el).attr('src');
+        if (!val) return;
+        const low = String(val).trim();
+        if (low.startsWith('javascript:') || low.startsWith('#') || low.startsWith('data:')) return;
+        try {
+          const absoluteUrl = new URL(val, targetUrl).href;
+          const tag = (($(el).prop && $(el).prop('tagName')) || '').toLowerCase();
+          let ext = '';
+          try { ext = path.extname(new URL(absoluteUrl).pathname || '').toLowerCase(); } catch(e) { ext = ''; }
+          const isVideo = tag === 'video' || tag === 'source' || videoExts.includes(ext);
+          if (isVideo) {
+            // leave as absolute remote URL (not proxied)
+            $(el).attr('src', absoluteUrl);
+          } else {
+            $(el).attr('src', `${proxyPrefix}/api/router?url=${toBase64(absoluteUrl)}`);
+          }
+        } catch (e) {}
+      });
+
+      // Rewrite srcset attributes (comma-separated list of URLs + descriptors)
+      $('[srcset]').each((_, el) => {
+        const val = $(el).attr('srcset');
+        if (!val) return;
+        try {
+          const parts = String(val).split(',').map(s => s.trim()).filter(Boolean);
+          const rewritten = parts.map(p => {
+            const sub = p.split(/\s+/);
+            const urlPart = sub[0];
+            const desc = sub.slice(1).join(' ');
+            if (!urlPart || urlPart.startsWith('data:') || urlPart.startsWith('javascript:') || urlPart.startsWith('#')) return p;
+            try {
+              const absoluteUrl = new URL(urlPart, targetUrl).href;
+              return `${proxyPrefix}/api/router?url=${toBase64(absoluteUrl)}` + (desc ? ' ' + desc : '');
+            } catch (e) {
+              return p;
+            }
+          }).join(', ');
+          $(el).attr('srcset', rewritten);
+        } catch (e) {}
+      });
+
+      // Inject interception script and frame-detection neutralizers (prepended to head)
       const interceptScript = `
       <script>
       (function() {
-        const referer = '${components.referer}';
+        // Base URL for rewrites inside the iframe
         const baseUrl = '${targetUrl}';
-        const referer = '{{REFERER}}'; // This will be replaced by your backend
-        function ensureReferer(url) {
-          if (!url) return url;
-            // Only rewrite if not absolute
-          if (url.startsWith('http://') || url.startsWith('https://')) return url;
-          if (url.startsWith(referer)) return url;
-          return referer.replace(/\/+$/, '') + '/' + url.replace(/^\/+/, '');
-        }
-        // Use ensureReferer wherever you rewrite URLs
-        // Example for anchor tags:
-        document.querySelectorAll('a[href]').forEach(a => {
-          const href = a.getAttribute('href');
-          if (href && !href.startsWith('javascript:') && !href.startsWith('#')) {
-            a.setAttribute('href', ensureReferer(href));
-          }
-        });
+
+        // Stronger frame-detection neutralizers: mask top/parent/frameElement
+        try {
+          Object.defineProperty(window, 'top', { get: function(){ return window; }, configurable: true });
+          Object.defineProperty(window, 'parent', { get: function(){ return window; }, configurable: true });
+          Object.defineProperty(window, 'frameElement', { get: function(){ return null; }, configurable: true });
+        } catch(e) {}
+        // legacy fallbacks
+        try { window.__defineGetter__ && window.__defineGetter__('top', function(){ return window; }); } catch(e) {}
+        try { window.__defineGetter__ && window.__defineGetter__('parent', function(){ return window; }); } catch(e) {}
+
+        // Force self references to the same window (helps checks like self!==top)
+        try { if (window.self !== window) window.self = window; } catch(e) {}
+
+        // single rewrite helper — use location.origin at runtime so rewritten
+        // links point to the proxy host (avoid the browser resolving them
+        // against the asset origin which causes CORS issues).
         function rewriteUrl(url) {
           if (!url || url.startsWith('/api/router') || url.startsWith('data:') ||
               url.startsWith('blob:') || url.startsWith('javascript:')) return url;
           try {
-            return '/api/router?url=' + btoa(new URL(url, baseUrl).href);
+            return location.origin + '/api/router?url=' + btoa(new URL(url, baseUrl).href);
           } catch(e) { return url; }
         }
-        window.open = function(url, ...args) {
-          window.location.href = rewriteUrl(url);
-          return null;
-        };
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
-          return originalFetch.call(this, rewriteUrl(url), options);
-        };
-        const originalOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(m, url, ...r) {
-          return originalOpen.call(this, m, rewriteUrl(url), ...r);
-        };
-        const originalAssign = window.location.assign;
-        window.location.assign = function(url) { return originalAssign.call(window.location, rewriteUrl(url)); };
-        const originalReplace = window.location.replace;
-        window.location.replace = function(url) { return originalReplace.call(window.location, rewriteUrl(url)); };
-        const originalPush = history.pushState;
-        history.pushState = function(s, t, url) { return originalPush.call(this, s, t, url?rewriteUrl(url):url); };
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function(s, t, url) { return originalReplaceState.call(this, s, t, url?rewriteUrl(url):url); };
-        const originalOpenFn = window.open;
-        window.open = function(url, ...r) { return originalOpenFn.call(window, rewriteUrl(url), ...r); };
 
+        // Intercept network/navigation APIs to keep requests inside the iframe
+        try {
+          const originalFetch = window.fetch && window.fetch.bind(window);
+          if (originalFetch) window.fetch = function(url, options) { return originalFetch(rewriteUrl(url), options); };
+        } catch(e){}
+
+        try {
+          const XHROpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            return XHROpen.call(this, method, rewriteUrl(url), ...args);
+          };
+        } catch(e){}
+
+        try {
+          const origOpen = window.open;
+          window.open = function(url, ...args) { return origOpen.call(this, rewriteUrl(url), ...args); };
+        } catch(e){}
+
+        try {
+          const origAssign = window.location.assign;
+          window.location.assign = function(url) { return origAssign.call(window.location, rewriteUrl(url)); };
+          const origReplace = window.location.replace;
+          window.location.replace = function(url) { return origReplace.call(window.location, rewriteUrl(url)); };
+        } catch(e){}
+
+        try {
+          const origPush = history.pushState;
+          history.pushState = function(s, t, url) { return origPush.call(this, s, t, url?rewriteUrl(url):url); };
+          const origReplaceState = history.replaceState;
+          history.replaceState = function(s, t, url) { return origReplaceState.call(this, s, t, url?rewriteUrl(url):url); };
+        } catch(e){}
+
+        // Intercept clicks and form submissions
         document.addEventListener('click', e => {
-          const a = e.target.closest('a[href]');
-          if (a && !a.href.startsWith('javascript:') && !a.href.startsWith('#')) {
-            e.preventDefault();
-            window.location.href = rewriteUrl(a.href);
-          }
-          if (a && a.target === '_blank') {
+          const a = e.target.closest && e.target.closest('a[href]');
+          if (a && a.href && !a.href.startsWith('javascript:') && !a.href.startsWith('#')) {
             e.preventDefault();
             window.location.href = rewriteUrl(a.href);
           }
@@ -453,8 +823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         document.addEventListener('submit', e => {
           const form = e.target;
-          if (form.tagName === 'FORM') {
-            if (form.method.toLowerCase() === 'get') {
+          if (form && form.tagName === 'FORM') {
+            if ((form.method || 'get').toLowerCase() === 'get') {
               e.preventDefault();
               const params = new URLSearchParams(new FormData(form)).toString();
               const action = form.action || window.location.href;
@@ -464,12 +834,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }, true);
+
+        // Remove any meta tags indicating X-Frame-Options (in-case server missed them)
+        try {
+          document.querySelectorAll('meta[http-equiv]').forEach(m => {
+            if ((m.getAttribute('http-equiv')||'').toLowerCase() === 'x-frame-options') m.remove();
+          });
+        } catch(e){}
+
       })();
       </script>
       `;
 
 
-      $("body").append(interceptScript);
+      // Prepend to head if present so this runs before most inline scripts execute
+      if ($('head').length) {
+        $('head').prepend(interceptScript);
+      } else {
+        $('body').append(interceptScript);
+      }
       var finalHtml = $.html();
 
       res.send(finalHtml);

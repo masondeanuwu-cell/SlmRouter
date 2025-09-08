@@ -1,4 +1,8 @@
 import { promises as fs } from "fs";
+import dotenv from 'dotenv';
+
+// load .env from project root (if present)
+dotenv.config();
 
 async function writeUptimeLog(uptime: string) {
   const filePath = "./start-time.log";
